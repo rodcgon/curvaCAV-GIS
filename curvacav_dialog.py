@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from qgis.PyQt.QtCore import Qt, QAbstractTableModel
-from qgis.PyQt.QtGui import QIcon, QPixmap, QColor, QPalette
+from qgis.PyQt.QtGui import QIcon, QPixmap, QColor
 from qgis.PyQt.QtWidgets import (
     QApplication, QCheckBox, QComboBox, QDialog, QFileDialog,
     QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
@@ -12,6 +12,7 @@ from qgis.PyQt.QtWidgets import (
 from qgis.core import (
     QgsProject, QgsMapLayer, QgsWkbTypes,
     QgsRectangle, QgsFeatureRequest, QgsCoordinateTransform,
+    QgsPointXY,
 )
 from qgis.gui import QgsMapTool, QgsRubberBand
 from .cav_core import get_raster_stats, run_cav
@@ -24,9 +25,9 @@ class FeaturePickTool(QgsMapTool):
     def __init__(self, canvas, layer, callback, iface=None):
         super().__init__(canvas)
         self._canvas = canvas
-        self._layer  = layer
+        self._layer = layer
         self._callback = callback
-        self._iface  = iface
+        self._iface = iface
 
     def canvasReleaseEvent(self, event):
         point = self.toMapCoordinates(event.pos())
@@ -36,7 +37,7 @@ class FeaturePickTool(QgsMapTool):
             point.x() + radius, point.y() + radius,
         )
         canvas_crs = self._canvas.mapSettings().destinationCrs()
-        layer_crs  = self._layer.crs()
+        layer_crs = self._layer.crs()
         if canvas_crs != layer_crs:
             tr = QgsCoordinateTransform(canvas_crs, layer_crs, QgsProject.instance())
             rect = tr.transformBoundingBox(rect)
@@ -57,9 +58,9 @@ class FeaturePickTool(QgsMapTool):
 class RectangleMapTool(QgsMapTool):
     def __init__(self, canvas, on_done):
         super().__init__(canvas)
-        self._canvas  = canvas
+        self._canvas = canvas
         self._on_done = on_done
-        self._start   = None
+        self._start = None
         self._drawing = False
         self._rb = QgsRubberBand(canvas, QgsWkbTypes.PolygonGeometry)
         self._rb.setColor(QColor(31, 120, 255, 160))
@@ -67,16 +68,14 @@ class RectangleMapTool(QgsMapTool):
         self._rb.setWidth(2)
 
     def canvasPressEvent(self, event):
-        from qgis.core import QgsPointXY
-        self._start   = self.toMapCoordinates(event.pos())
+        self._start = self.toMapCoordinates(event.pos())
         self._drawing = True
         self._rb.reset(QgsWkbTypes.PolygonGeometry)
 
     def canvasMoveEvent(self, event):
         if not self._drawing or self._start is None:
             return
-        from qgis.core import QgsPointXY
-        end  = self.toMapCoordinates(event.pos())
+        end = self.toMapCoordinates(event.pos())
         rect = QgsRectangle(self._start, end)
         self._rb.reset(QgsWkbTypes.PolygonGeometry)
         for pt in [
@@ -95,7 +94,7 @@ class RectangleMapTool(QgsMapTool):
         self._drawing = False
         self._rb.reset()
         rect = QgsRectangle(self._start, end)
-        crs  = self._canvas.mapSettings().destinationCrs()
+        crs = self._canvas.mapSettings().destinationCrs()
         self._on_done(rect, crs)
 
     def deactivate(self):
@@ -112,8 +111,11 @@ class PandasModel(QAbstractTableModel):
         super().__init__(parent)
         self._df = pd.DataFrame()
 
-    def rowCount(self, parent=None):   return len(self._df)
-    def columnCount(self, parent=None): return 3
+    def rowCount(self, parent=None):
+        return len(self._df)
+
+    def columnCount(self, parent=None):
+        return 3
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid() or role != Qt.DisplayRole:
@@ -147,8 +149,8 @@ class PandasModel(QAbstractTableModel):
 # Para ajustar cores do dropdown, edite as constantes abaixo:
 
 class ComboItemDelegate(QStyledItemDelegate):
-    BG_NORMAL   = QColor('#ffffff')
-    FG_NORMAL   = QColor('#17324d')
+    BG_NORMAL = QColor('#ffffff')
+    FG_NORMAL = QColor('#17324d')
     BG_SELECTED = QColor('#1f78ff')
     FG_SELECTED = QColor('#ffffff')
 
@@ -203,12 +205,12 @@ class CurvaCAVDialog(QDialog):
         super().__init__(parent)
         self.iface          = iface
         self.plugin_dir     = os.path.dirname(__file__)
-        self._drawn_rect    = None
-        self._drawn_crs     = None
+        self._drawn_rect = None
+        self._drawn_crs = None
         self._prev_map_tool = None
         self._selected_feature = None
         self._current_plot_pixmap = None
-        self._last_df       = None
+        self._last_df = None
         self._last_plot_path = None
 
         self.setWindowTitle('curvaCAV-GIS  v1.0.5')
@@ -244,7 +246,7 @@ class CurvaCAVDialog(QDialog):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
 
-        title    = QLabel('Curva Cota-Area-Volume')
+        title = QLabel('Curva Cota-Area-Volume')
         title.setObjectName('titleLabel')
         subtitle = QLabel('Calcule a CAV a partir de um MDT. Pasta de saida disponivel na aba Resultados.')
         subtitle.setWordWrap(True)
@@ -653,7 +655,7 @@ class CurvaCAVDialog(QDialog):
 
     def _on_rectangle_drawn(self, rect, crs):
         self._drawn_rect = rect
-        self._drawn_crs  = crs
+        self._drawn_crs = crs
         self.lblDrawnRect.setText(
             'Rect: ({:.2f},{:.2f})-({:.2f},{:.2f})'.format(
                 rect.xMinimum(), rect.yMinimum(),
@@ -761,7 +763,7 @@ class CurvaCAVDialog(QDialog):
         try:
             result = run_cav(**params)
             self.txtLog.append(result['message'])
-            self._last_df        = result.get('df')
+            self._last_df = result.get('df')
             self._last_plot_path = result.get('plot')
             if self._last_df is not None:
                 self.tblModel.setDataFrame(self._last_df)

@@ -1,25 +1,27 @@
 [general]
 name=curvaCAV-GIS
 qgisMinimumVersion=3.16
-description=Calculates Elevation-Area-Volume (CAV) curves from DTM rasters in QGIS.
-about=Plugin for calculation of Elevation-Area-Volume (CAV/EAV) curves from a DTM raster in QGIS.
-    Supports clipping by polygon layer (with single-feature selection), current map extent, or
-    user-drawn rectangle on the map canvas. Results include an interactive chart and a
-    Cota-Area-Volume table, which can be exported as CSV and PNG.
-    Requirements: QGIS 3.16 or newer. Works on Windows, Linux and macOS.
-    Author: Rodrigo Goncalves (rcghidro@gmail.com).
+description=Calculates Elevation-Area-Volume (CAV/EAV) curves from DTM rasters in QGIS.
+about=Plugin for calculation of Elevation-Area-Volume (CAV/EAV) curves from a DTM (Digital Terrain Model) raster in QGIS.
+    Supports clipping by polygon layer (with optional single-feature selection), current map extent, or
+    user-drawn rectangle on the map canvas. Results are displayed in a dedicated tab with an
+    interactive chart (Area and Volume vs Elevation) and a full Elevation-Area-Volume table,
+    exportable as CSV and PNG image.
+    No external Python dependencies required. Works on Windows, Linux and macOS.
+    Requirements: QGIS 3.16 or newer.
 version=1.0.5
 author=Rodrigo Goncalves
 email=rcghidro@gmail.com
 category=Raster
 experimental=False
 deprecated=False
-tags=hydrology,bathymetry,reservoir,volume,curve,elevation,area,raster,CAV,cota,DTM,DEM
+license=GPLv2+
+tags=hydrology,bathymetry,reservoir,volume,curve,elevation,area,raster,CAV,EAV,DTM,DEM,hydraulic
 homepage=https://github.com/rodcgon/curvaCAV-GIS
 repository=https://github.com/rodcgon/curvaCAV-GIS
 tracker=https://github.com/rodcgon/curvaCAV-GIS/issues
 icon=icon.png
-changelog=1.0.5 - Fixed QLabel links in About tab; load statistics on demand (no auto-calc on layer change); updated About section with donation link and GitHub; improved stability for large rasters.
-    1.0.4 - Added on-demand statistics loading button; added Export results section in Results tab; added single-feature selection from map canvas.
+changelog=1.0.5 - Fixed hyperlinks in About tab (setOpenExternalLinks); statistics loaded on demand to avoid UI freeze on large rasters; metadata improved for QGIS repository approval.
+    1.0.4 - Added on-demand statistics loading button; Export results section in Results tab; single-feature selection from map canvas.
     1.0.3 - Added polygon layer single-feature selection; moved output folder to Results tab.
     1.0.2 - Initial public release.

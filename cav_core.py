@@ -3,16 +3,17 @@ import os
 import math
 import tempfile
 from datetime import datetime
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker as mticker  # noqa: E402
 import numpy as np
 import pandas as pd
 from numpy import arange
 from osgeo import gdal
 from qgis import processing
-from qgis.core import QgsReferencedRectangle, QgsCoordinateReferenceSystem
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+from qgis.core import QgsReferencedRectangle
 
 
 def _clip_by_polygon(mdt_layer, polygon_layer):
@@ -27,12 +28,13 @@ def _clip_by_polygon(mdt_layer, polygon_layer):
     return result['OUTPUT']
 
 
-
 def _clip_by_feature(mdt_layer, polygon_layer, feature):
-    """Recorta raster por uma única feature de um layer poligonal."""
+    """Clip raster by a single feature from a polygon layer."""
     from qgis.core import QgsVectorLayer
     crs_str = polygon_layer.crs().authid()
-    temp = QgsVectorLayer('Polygon?crs={}'.format(crs_str), 'temp_feature_clip', 'memory')
+    temp = QgsVectorLayer(
+        'Polygon?crs={}'.format(crs_str), 'temp_feature_clip', 'memory'
+    )
     temp.dataProvider().addFeature(feature)
     temp.updateExtents()
     result = processing.run('gdal:cliprasterbymasklayer', {
@@ -45,8 +47,9 @@ def _clip_by_feature(mdt_layer, polygon_layer, feature):
     })
     return result['OUTPUT']
 
+
 def _clip_by_extent(mdt_layer, extent, crs):
-    """Recorta raster pelo extent fornecido. Aceita QgsRectangle + QgsCoordinateReferenceSystem."""
+    """Clip raster by a QgsRectangle + QgsCoordinateReferenceSystem extent."""
     ref_rect = QgsReferencedRectangle(extent, crs)
     result = processing.run('gdal:cliprasterbyextent', {
         'INPUT': mdt_layer,
@@ -62,7 +65,8 @@ def _clip_by_extent(mdt_layer, extent, crs):
 
 
 def get_raster_stats(mdt_layer, area_mode=0, polygon_layer=None,
-                     iface=None, drawn_rect=None, drawn_crs=None, selected_feature=None):
+                     iface=None, drawn_rect=None, drawn_crs=None,
+                     selected_feature=None):
     source = mdt_layer
     if area_mode == 1 and polygon_layer is not None:
         if selected_feature is not None:
@@ -90,7 +94,7 @@ def get_raster_stats(mdt_layer, area_mode=0, polygon_layer=None,
 def _read_array(raster_source):
     ds = gdal.Open(raster_source)
     if ds is None:
-        raise ValueError('Nao foi possivel abrir o raster: {}'.format(raster_source))
+        raise ValueError('Could not open raster: {}'.format(raster_source))
     band = ds.GetRasterBand(1)
     arr = band.ReadAsArray().astype(float)
     nodata = band.GetNoDataValue()
@@ -155,20 +159,12 @@ def plota(df_in, fo):
 
     plt.subplots_adjust(wspace=0.04, hspace=0.0)
 
-    # Watermark: centralizada nos dois painéis, 80% transparência
     watermark = 'Plugin curvaCAV-GIS - QGIS\nrcghidro@gmail.com'
     fig.text(
-        0.87, 0.15,
-        watermark,
-        fontsize=15,
-        color='0.3',
-        alpha=0.20,
-        ha='right',
-        va='bottom',
-        rotation=0,
-        transform=fig.transFigure,
-        fontweight='normal',
-        linespacing=1.8,
+        0.87, 0.15, watermark,
+        fontsize=15, color='0.3', alpha=0.20,
+        ha='right', va='bottom', rotation=0,
+        transform=fig.transFigure, fontweight='normal', linespacing=1.8,
     )
 
     plt.savefig(fo, bbox_inches='tight')
@@ -227,23 +223,35 @@ def run_cav(iface, mdt_layer, area_mode, polygon_layer,
     csv_path = None
     if output_folder:
         os.makedirs(output_folder, exist_ok=True)
-        csv_path = os.path.join(output_folder, '{}_CURVA_CAV{}.csv'.format(base_name, stamp))
+        csv_path = os.path.join(
+            output_folder, '{}_CURVA_CAV{}.csv'.format(base_name, stamp)
+        )
         df.to_csv(csv_path, encoding='utf-8-sig')
 
     plot_path = None
     if make_plot:
         if output_folder:
-            plot_path = os.path.join(output_folder, '{}_CAV_PLOT{}.jpg'.format(base_name, stamp))
+            plot_path = os.path.join(
+                output_folder, '{}_CAV_PLOT{}.jpg'.format(base_name, stamp)
+            )
         else:
-            plot_path = os.path.join(tempfile.gettempdir(), '{}_CAV_PLOT{}.jpg'.format(base_name, stamp))
+            plot_path = os.path.join(
+                tempfile.gettempdir(), '{}_CAV_PLOT{}.jpg'.format(base_name, stamp)
+            )
         plota(df, plot_path)
 
-    area_labels = {0: 'todo o MDT', 2: 'extent atual do mapa', 3: 'retangulo desenhado'}
+    area_labels = {
+        0: 'todo o MDT',
+        2: 'extent atual do mapa',
+        3: 'retangulo desenhado',
+    }
     area_label = area_labels.get(area_mode, 'todo o MDT')
     if area_mode == 1 and polygon_layer is not None:
         area_label = 'layer poligonal: {}'.format(polygon_layer.name())
 
     return {
         'message': 'CAV calculada com sucesso usando {}.'.format(area_label),
-        'csv': csv_path, 'plot': plot_path, 'df': df,
+        'csv': csv_path,
+        'plot': plot_path,
+        'df': df,
     }
