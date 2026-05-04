@@ -1,44 +1,52 @@
 # curvaCAV-GIS
 
-Plugin QGIS para cálculo de curvas **Cota-Área-Volume (CAV)** a partir de MDT (Modelo Digital de Terreno).
+QGIS plugin for calculating **Elevation-Area-Volume (CAV/EAV)** curves from a DTM raster.
 
-## Recursos
+## Features
 
-- Cálculo CAV com incremento configurável
-- Modos de recorte: todo o MDT, layer poligonal, extent atual do mapa ou retângulo desenhado
-- Estatísticas (cota mín/máx) atualizadas conforme a área selecionada
-- Aba "Resultados" com gráfico interativo e tabela
-- Exportação de CSV e gráfico (JPG/PNG)
-- Copiar tabela para clipboard (colar no Excel com Ctrl+V)
-- Copiar imagem do gráfico para clipboard
+- CAV/EAV curve calculation with configurable elevation increment
+- Clipping modes: entire DTM, polygon layer (with optional single-feature selection), current map extent, or rectangle drawn on the map canvas
+- On-demand raster statistics (min/max elevation, resolution)
+- Results tab with interactive Area and Volume chart
+- Full Elevation-Area-Volume table
+- Export results as CSV and PNG chart
+- Copy table to clipboard (paste directly in Excel with Ctrl+V)
+- Copy chart image to clipboard
+- No external Python dependencies required
 
-## Instalação
+## Requirements
 
-### Via repositório QGIS
-1. QGIS → Plugins → Gerenciar e Instalar Plugins
-2. Buscar por `curvaCAV-GIS`
-3. Instalar e ativar
+- QGIS 3.16 or newer
+- Compatible with Windows, Linux and macOS
 
-### Via ZIP
-1. QGIS → Plugins → Gerenciar e Instalar Plugins → Instalar a partir de ZIP
-2. Selecionar `curvaCAV_GIS_vX.X.X.zip`
-3. Ativar o plugin
+## Installation
 
-## Uso
+### From the QGIS Plugin Repository
+1. QGIS → Plugins → Manage and Install Plugins
+2. Search for `curvaCAV-GIS`
+3. Click Install
 
-1. Clique no ícone **curvaCAV-GIS** na toolbar
-2. Selecione o MDT raster
-3. Defina a área considerada (padrão: extent atual do mapa)
-4. Ajuste cota inicial, máxima e incremento
-5. (Opcional) defina pasta de saída para salvar CSV e gráfico
-6. Clique em **Calcular** — resultados aparecem na aba **Resultados**
+### From ZIP
+1. QGIS → Plugins → Manage and Install Plugins → Install from ZIP
+2. Select the downloaded `.zip` file
+3. Enable the plugin
 
-## Autor
+## Usage
+
+1. Click the **curvaCAV-GIS** toolbar icon
+2. Select the DTM raster layer
+3. Choose the area mode (default: entire DTM)
+4. Click **Load statistics** to populate min/max elevation fields
+5. Set min elevation, max elevation and increment
+6. Click **Calculate** — results appear in the **Results** tab
+7. Optionally set an output folder and click **Save results to folder** to export CSV and chart
+
+## Author
 
 **Rodrigo Goncalves**
 Email: rcghidro@gmail.com
 GitHub: https://github.com/rodcgon
 
-## Licença
+## License
 
-GNU General Public License v2.0 — veja [LICENSE](LICENSE)
+GNU General Public License v2 or later — see [LICENSE](LICENSE)
