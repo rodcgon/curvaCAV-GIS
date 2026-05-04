@@ -1,0 +1,43 @@
+curvaCAV-GIS - Manual rapido (v1.0.4)
+
+1. Objetivo
+Calcula curvas Cota-Area-Volume (CAV) a partir de um MDT raster no QGIS, permitindo recorte por layer poligonal, extent atual do mapa ou retangulo desenhado.
+
+2. Requisitos
+- QGIS 3.16 ou superior
+- Layer raster (MDT/DTM) carregado no projeto
+
+3. Instalacao via ZIP
+1) QGIS -> Plugins -> Gerenciar e Instalar Plugins
+2) Botao "Instalar a partir de ZIP"
+3) Selecione o arquivo curvaCAV_GIS_v1.0.4_PTBR.zip
+4) Ative o plugin "curvaCAV-GIS" em Plugins -> Gerenciar
+
+4. Uso basico
+1) Clique no icone "curvaCAV-GIS" na barra de ferramentas
+2) Aba Calculo:
+   - MDT raster: escolha o MDT
+   - Area considerada:
+       * Usar todo o MDT
+       * Usar layer poligonal (com selecao de uma feature unica opcional)
+       * Usar extent atual do mapa
+       * Desenhar retangulo no mapa
+   - Cota inicial, Cota maxima, Incremento: defina os valores de simulacao
+   - Marque "Gerar grafico" para criar o grafico CAV
+   - Clique em "Calcular"
+3) Aba Resultados:
+   - Visualize o grafico CAV (Area e Volume)
+   - Veja a tabela Cota-Area-Volume
+   - Use os botoes para salvar/copiar grafico e tabela
+   - Defina "Pasta de saida" e clique em "Salvar resultados na pasta" para exportar CSV e imagem
+
+5. Selecionar area
+- Layer poligonal:
+   Escolha o layer e, se desejar, clique em "Selecionar feature no mapa" para escolher um unico poligono.
+- Retangulo:
+   Clique em "Ativar ferramenta de retangulo" e desenhe no map canvas.
+
+6. Aviso de responsabilidade
+O autor nao se responsabiliza por resultados, decisoes de projeto ou danos decorrentes do uso deste plugin. Verifique sempre os dados de entrada e valide os resultados conforme as normas tecnicas aplicaveis.
+
+Autor: Rodrigo Goncalves (rcghidro@gmail.com)

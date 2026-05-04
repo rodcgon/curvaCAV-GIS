@@ -1,0 +1,16 @@
+[general]
+name=curvaCAV-GIS
+qgisMinimumVersion=3.16
+description=Calculates Elevation-Area-Volume curves (CAV) from DTM rasters, with polygon or extent clipping.
+about=Plugin for calculation of Elevation-Area-Volume (CAV) curves from DTM in QGIS. Supports clipping by polygon layer, current map extent, or user-drawn rectangle. Results shown in dedicated tab with chart and table. Author: Rodrigo Goncalves. Version 1.0.4.
+version=1.0.4
+author=Rodrigo Goncalves
+email=rcghidro@gmail.com
+category=Raster
+experimental=False
+deprecated=False
+tags=hydrology,bathymetry,reservoir,volume,curve,elevation,area,raster,CAV,cota
+homepage=https://github.com/rodcgon/curvaCAV-GIS
+repository=https://github.com/rodcgon/curvaCAV-GIS
+tracker=https://github.com/rodcgon/curvaCAV-GIS/issues
+icon=icon.png
