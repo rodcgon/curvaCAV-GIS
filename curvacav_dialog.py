@@ -211,7 +211,7 @@ class CurvaCAVDialog(QDialog):
         self._last_df       = None
         self._last_plot_path = None
 
-        self.setWindowTitle('curvaCAV-GIS  v1.0.4')
+        self.setWindowTitle('curvaCAV-GIS  v1.0.5')
         self.setMinimumWidth(700)
         self.setMinimumHeight(660)
         self._build_ui()
@@ -462,12 +462,12 @@ class CurvaCAVDialog(QDialog):
         card_lay.addWidget(t)
         info = QLabel(
             '<div style="text-align:center;">' +
-            '<p>Versao 1.0.4 &nbsp;|&nbsp; 30/04/2026</p>' +
+            '<p>Versao 1.0.5 &nbsp;|&nbsp; 04/05/2026</p>' +
             '<p style="color:#526476;">Para duvidas, sugestoes, bug reports, treinamentos e plugins sob medida, favor entrar em contato.</p>' +
             '<p><b>Autor:</b> Rodrigo Goncalves</p>' +
             '<p><b>Email:</b> <a href="mailto:rcghidro@gmail.com">rcghidro@gmail.com</a></p>' +
             '<p style="color:#526476;">Plugin para calculo de curvas Cota-Area-Volume a partir de MDT.</p>' +
-            '<p style="color:#526476;">O autor nao se responsabiliza por resultados, decisões de projeto ou danos decorrentes do uso deste plugin.</p>' +
+            '<p style="color:#526476;">O autor nao se responsabiliza por resultados, decisoes de projeto ou danos decorrentes do uso deste plugin.</p>' +
             '<p style="color:#526476;">Se o plugin foi util para voce, <a href="https://rodcgon.github.io/donate/">considere fazer uma doacao para o projeto.</a></p>' +
             '</div>'
         )
