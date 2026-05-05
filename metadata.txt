@@ -9,7 +9,7 @@ about=Plugin for calculation of Elevation-Area-Volume (CAV/EAV) curves from a DT
     exportable as CSV and PNG image.
     No external Python dependencies required. Works on Windows, Linux and macOS.
     Requirements: QGIS 3.16 or newer.
-version=1.0.5
+version=1.0.6
 author=Rodrigo Goncalves
 email=rcghidro@gmail.com
 category=Raster
@@ -21,7 +21,8 @@ homepage=https://github.com/rodcgon/curvaCAV-GIS
 repository=https://github.com/rodcgon/curvaCAV-GIS
 tracker=https://github.com/rodcgon/curvaCAV-GIS/issues
 icon=icon.png
-changelog=1.0.5 - Fixed hyperlinks in About tab (setOpenExternalLinks); statistics loaded on demand to avoid UI freeze on large rasters; metadata improved for QGIS repository approval.
+changelog=changelog=1.0.6 (04/05/2026): Replaced QComboBox with QgsMapLayerComboBox for DTM and polygon layer selectors; translated all code comments to English; fixed all Flake8 style issues (F401, E221, E302, E303, E402, E704); statistics loaded on demand to avoid UI freeze on large rasters.
+  1.0.5 - Fixed hyperlinks in About tab (setOpenExternalLinks); statistics loaded on demand to avoid UI freeze on large rasters; metadata improved for QGIS repository approval.
     1.0.4 - Added on-demand statistics loading button; Export results section in Results tab; single-feature selection from map canvas.
     1.0.3 - Added polygon layer single-feature selection; moved output folder to Results tab.
     1.0.2 - Initial public release.

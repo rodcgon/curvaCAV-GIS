@@ -1,25 +1,26 @@
 # -*- coding: utf-8 -*-
 import os
+
 from qgis.PyQt.QtCore import Qt, QAbstractTableModel
 from qgis.PyQt.QtGui import QIcon, QPixmap, QColor
 from qgis.PyQt.QtWidgets import (
-    QApplication, QCheckBox, QComboBox, QDialog, QFileDialog,
-    QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QSplitter, QStyledItemDelegate, QStyle, QTabWidget,
+    QApplication, QCheckBox, QDialog, QFileDialog,
+    QFormLayout, QFrame, QHBoxLayout, QLabel, QMessageBox,
+    QPushButton, QSplitter, QStyle, QStyledItemDelegate, QTabWidget,
     QTableView, QTextEdit, QVBoxLayout, QWidget, QDoubleSpinBox,
-    QHeaderView, QSizePolicy,
+    QHeaderView, QSizePolicy, QLineEdit,
 )
 from qgis.core import (
     QgsProject, QgsMapLayer, QgsWkbTypes,
-    QgsRectangle, QgsFeatureRequest, QgsCoordinateTransform,
-    QgsPointXY,
+    QgsRectangle, QgsFeatureRequest, QgsCoordinateTransform, QgsPointXY,
 )
-from qgis.gui import QgsMapTool, QgsRubberBand
+from qgis.gui import QgsMapTool, QgsRubberBand, QgsMapLayerComboBox
+from qgis.core import QgsMapLayerProxyModel
 from .cav_core import get_raster_stats, run_cav
 import pandas as pd
 
 
-# ── Ferramenta: selecionar feature unica no mapa ──────────────────────────────
+# ── Map tool: select a single feature by clicking on the canvas ───────────────
 
 class FeaturePickTool(QgsMapTool):
     def __init__(self, canvas, layer, callback, iface=None):
@@ -39,21 +40,28 @@ class FeaturePickTool(QgsMapTool):
         canvas_crs = self._canvas.mapSettings().destinationCrs()
         layer_crs = self._layer.crs()
         if canvas_crs != layer_crs:
-            tr = QgsCoordinateTransform(canvas_crs, layer_crs, QgsProject.instance())
+            tr = QgsCoordinateTransform(
+                canvas_crs, layer_crs, QgsProject.instance()
+            )
             rect = tr.transformBoundingBox(rect)
-        feats = list(self._layer.getFeatures(QgsFeatureRequest().setFilterRect(rect).setLimit(1)))
+        feats = list(
+            self._layer.getFeatures(
+                QgsFeatureRequest().setFilterRect(rect).setLimit(1)
+            )
+        )
         if feats:
             self._callback(feats[0])
         elif self._iface:
             self._iface.messageBar().pushWarning(
-                'curvaCAV-GIS', 'Nenhuma feature encontrada. Clique sobre o poligono desejado.'
+                'curvaCAV-GIS',
+                'No feature found. Click directly over the desired polygon.',
             )
 
     def deactivate(self):
         super().deactivate()
 
 
-# ── Ferramenta: retangulo desenhado no mapa ───────────────────────────────────
+# ── Map tool: draw a rectangle on the canvas ──────────────────────────────────
 
 class RectangleMapTool(QgsMapTool):
     def __init__(self, canvas, on_done):
@@ -102,7 +110,7 @@ class RectangleMapTool(QgsMapTool):
         super().deactivate()
 
 
-# ── Pandas model ──────────────────────────────────────────────────────────────
+# ── Table model backed by a pandas DataFrame ──────────────────────────────────
 
 class PandasModel(QAbstractTableModel):
     HEADERS = ['Cota', 'Area (m2)', 'Volume (m3)']
@@ -127,7 +135,11 @@ class PandasModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role != Qt.DisplayRole:
             return None
-        return self.HEADERS[section] if orientation == Qt.Horizontal else str(section + 1)
+        return (
+            self.HEADERS[section]
+            if orientation == Qt.Horizontal
+            else str(section + 1)
+        )
 
     def setDataFrame(self, df):
         self.beginResetModel()
@@ -145,8 +157,7 @@ class PandasModel(QAbstractTableModel):
         return '\n'.join(lines)
 
 
-# ── Delegate customizado para itens dos ComboBox ──────────────────────────────
-# Para ajustar cores do dropdown, edite as constantes abaixo:
+# ── Delegate for custom dropdown item colors ──────────────────────────────────
 
 class ComboItemDelegate(QStyledItemDelegate):
     BG_NORMAL = QColor('#ffffff')
@@ -160,10 +171,16 @@ class ComboItemDelegate(QStyledItemDelegate):
             (option.state & QStyle.State_Selected) or
             (option.state & QStyle.State_MouseOver)
         )
-        painter.fillRect(option.rect, self.BG_SELECTED if active else self.BG_NORMAL)
+        painter.fillRect(
+            option.rect, self.BG_SELECTED if active else self.BG_NORMAL
+        )
         painter.setPen(self.FG_SELECTED if active else self.FG_NORMAL)
         text = index.data(Qt.DisplayRole) or ''
-        painter.drawText(option.rect.adjusted(8, 0, -8, 0), Qt.AlignVCenter | Qt.AlignLeft, text)
+        painter.drawText(
+            option.rect.adjusted(8, 0, -8, 0),
+            Qt.AlignVCenter | Qt.AlignLeft,
+            text,
+        )
         painter.restore()
 
     def sizeHint(self, option, index):
@@ -171,7 +188,7 @@ class ComboItemDelegate(QStyledItemDelegate):
         return sh.__class__(sh.width(), max(sh.height(), 26))
 
 
-# ── Label com imagem auto-escalavel ──────────────────────────────────────────
+# ── Auto-scaling image label ──────────────────────────────────────────────────
 
 class ScaledImageLabel(QLabel):
     def __init__(self, parent=None):
@@ -180,7 +197,7 @@ class ScaledImageLabel(QLabel):
         self.setAlignment(Qt.AlignCenter)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMinimumHeight(200)
-        self.setText('Nenhum grafico gerado ainda.')
+        self.setText('No chart generated yet.')
 
     def setSourcePixmap(self, pixmap):
         self._source_pixmap = pixmap
@@ -194,17 +211,17 @@ class ScaledImageLabel(QLabel):
         if self._source_pixmap and not self._source_pixmap.isNull():
             self.setPixmap(self._source_pixmap.scaled(
                 self.width() - 4, self.height() - 4,
-                Qt.KeepAspectRatio, Qt.SmoothTransformation
+                Qt.KeepAspectRatio, Qt.SmoothTransformation,
             ))
 
 
-# ── Dialog principal ──────────────────────────────────────────────────────────
+# ── Main dialog ───────────────────────────────────────────────────────────────
 
 class CurvaCAVDialog(QDialog):
     def __init__(self, iface, parent=None):
         super().__init__(parent)
-        self.iface          = iface
-        self.plugin_dir     = os.path.dirname(__file__)
+        self.iface = iface
+        self.plugin_dir = os.path.dirname(__file__)
         self._drawn_rect = None
         self._drawn_crs = None
         self._prev_map_tool = None
@@ -213,14 +230,12 @@ class CurvaCAVDialog(QDialog):
         self._last_df = None
         self._last_plot_path = None
 
-        self.setWindowTitle('curvaCAV-GIS  v1.0.5')
+        self.setWindowTitle('curvaCAV-GIS  v1.0.6')
         self.setMinimumWidth(700)
         self.setMinimumHeight(660)
         self._build_ui()
         self._connect_signals()
         self._apply_style()
-        self._populate_layers()
-        self._fix_combos()
         self._update_area_state()
 
     # ── Build UI ──────────────────────────────────────────────────────────────
@@ -231,12 +246,12 @@ class CurvaCAVDialog(QDialog):
         root.setSpacing(10)
         self.tabs = QTabWidget()
         root.addWidget(self.tabs)
-        self.tab_calc    = QWidget()
+        self.tab_calc = QWidget()
         self.tab_results = QWidget()
-        self.tab_about   = QWidget()
-        self.tabs.addTab(self.tab_calc,    'Calculo')
+        self.tab_about = QWidget()
+        self.tabs.addTab(self.tab_calc, 'Calculo')
         self.tabs.addTab(self.tab_results, 'Resultados')
-        self.tabs.addTab(self.tab_about,   'Sobre')
+        self.tabs.addTab(self.tab_about, 'Sobre')
         self._build_calc_tab()
         self._build_results_tab()
         self._build_about_tab()
@@ -248,7 +263,10 @@ class CurvaCAVDialog(QDialog):
 
         title = QLabel('Curva Cota-Area-Volume')
         title.setObjectName('titleLabel')
-        subtitle = QLabel('Calcule a CAV a partir de um MDT. Pasta de saida disponivel na aba Resultados.')
+        subtitle = QLabel(
+            'Calcule a CAV a partir de um MDT. '
+            'Pasta de saida disponivel na aba Resultados.'
+        )
         subtitle.setWordWrap(True)
         subtitle.setObjectName('subtitleLabel')
         layout.addWidget(title)
@@ -267,11 +285,14 @@ class CurvaCAVDialog(QDialog):
         form.setVerticalSpacing(9)
         card_lay.addLayout(form)
 
-        # MDT
-        self.cmbMdtLayer = QComboBox()
+        # DTM layer — native QGIS raster layer picker
+        self.cmbMdtLayer = QgsMapLayerComboBox()
+        self.cmbMdtLayer.setFilters(QgsMapLayerProxyModel.RasterLayer)
+        self.cmbMdtLayer.setAllowEmptyLayer(True)
         form.addRow('MDT raster', self.cmbMdtLayer)
 
-        # Area
+        # Area mode combo
+        from qgis.PyQt.QtWidgets import QComboBox
         self.cmbAreaMode = QComboBox()
         self.cmbAreaMode.addItems([
             'Usar todo o MDT',
@@ -282,11 +303,13 @@ class CurvaCAVDialog(QDialog):
         self.cmbAreaMode.setCurrentIndex(2)
         form.addRow('Area considerada', self.cmbAreaMode)
 
-        # Layer poligonal
-        self.cmbPolygonLayer = QComboBox()
+        # Polygon layer — native QGIS polygon layer picker
+        self.cmbPolygonLayer = QgsMapLayerComboBox()
+        self.cmbPolygonLayer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmbPolygonLayer.setAllowEmptyLayer(True)
         form.addRow('Layer poligonal', self.cmbPolygonLayer)
 
-        # Selecao de feature unica
+        # Single-feature selection
         feat_row = QWidget()
         feat_lay = QHBoxLayout(feat_row)
         feat_lay.setContentsMargins(0, 0, 0, 0)
@@ -300,7 +323,7 @@ class CurvaCAVDialog(QDialog):
         feat_lay.addWidget(self.lblSelectedFeature, 1)
         form.addRow('Feature', feat_row)
 
-        # Retangulo
+        # Rectangle draw tool
         draw_row = QWidget()
         draw_lay = QHBoxLayout(draw_row)
         draw_lay.setContentsMargins(0, 0, 0, 0)
@@ -313,21 +336,23 @@ class CurvaCAVDialog(QDialog):
         draw_lay.addWidget(self.lblDrawnRect, 1)
         form.addRow('Retangulo', draw_row)
 
-        # Informacoes — carregar sob demanda (nao automatico)
+        # Statistics — loaded on demand to avoid UI freeze on large rasters
         info_row = QWidget()
         info_lay = QHBoxLayout(info_row)
         info_lay.setContentsMargins(0, 0, 0, 0)
         info_lay.setSpacing(8)
         self.btnLoadStats = QPushButton('Carregar estatisticas')
         self.btnLoadStats.setObjectName('copyButton')
-        self.lblRasterInfo = QLabel('Clique para carregar informacoes do MDT selecionado.')
+        self.lblRasterInfo = QLabel(
+            'Clique para carregar informacoes do MDT selecionado.'
+        )
         self.lblRasterInfo.setObjectName('infoLabel')
         self.lblRasterInfo.setWordWrap(True)
         info_lay.addWidget(self.btnLoadStats)
         info_lay.addWidget(self.lblRasterInfo, 1)
         form.addRow('Informacoes', info_row)
 
-        # Cotas
+        # Elevation range inputs
         self.dblCotaIni = QDoubleSpinBox()
         self.dblCotaIni.setDecimals(3)
         self.dblCotaIni.setRange(-1e9, 1e9)
@@ -344,7 +369,7 @@ class CurvaCAVDialog(QDialog):
         self.dblIncremento.setValue(1.0)
         form.addRow('Incremento', self.dblIncremento)
 
-        # Acoes
+        # Action buttons
         actions = QHBoxLayout()
         actions.setSpacing(8)
         self.chkPlot = QCheckBox('Gerar grafico')
@@ -356,7 +381,7 @@ class CurvaCAVDialog(QDialog):
         actions.addWidget(self.btnRun)
         card_lay.addLayout(actions)
 
-        # Log
+        # Execution log
         self.txtLog = QTextEdit()
         self.txtLog.setReadOnly(True)
         self.txtLog.setPlaceholderText('Log da execucao...')
@@ -371,7 +396,7 @@ class CurvaCAVDialog(QDialog):
         splitter = QSplitter(Qt.Vertical)
         layout.addWidget(splitter)
 
-        # Grafico
+        # Chart panel
         plot_widget = QWidget()
         plot_lay = QVBoxLayout(plot_widget)
         plot_lay.setContentsMargins(0, 0, 0, 0)
@@ -379,9 +404,9 @@ class CurvaCAVDialog(QDialog):
         plot_header = QHBoxLayout()
         lbl_pt = QLabel('Grafico CAV')
         lbl_pt.setObjectName('titleLabel')
-        self.btnSavePlot  = QPushButton('Salvar...')
+        self.btnSavePlot = QPushButton('Salvar...')
         self.btnSavePlot.setObjectName('copyButton')
-        self.btnCopyPlot  = QPushButton('Copiar imagem')
+        self.btnCopyPlot = QPushButton('Copiar imagem')
         self.btnCopyPlot.setObjectName('copyButton')
         plot_header.addWidget(lbl_pt)
         plot_header.addStretch(1)
@@ -389,11 +414,12 @@ class CurvaCAVDialog(QDialog):
         plot_header.addWidget(self.btnCopyPlot)
         plot_lay.addLayout(plot_header)
         self.lblPlot = ScaledImageLabel()
+        from qgis.PyQt.QtWidgets import QFrame
         self.lblPlot.setFrameShape(QFrame.StyledPanel)
         plot_lay.addWidget(self.lblPlot)
         splitter.addWidget(plot_widget)
 
-        # Tabela
+        # Table panel
         tbl_widget = QWidget()
         tbl_lay = QVBoxLayout(tbl_widget)
         tbl_lay.setContentsMargins(0, 0, 0, 0)
@@ -408,16 +434,18 @@ class CurvaCAVDialog(QDialog):
         tbl_header.addWidget(self.btnCopyTable)
         tbl_lay.addLayout(tbl_header)
         self.tblResults = QTableView()
-        self.tblModel   = PandasModel()
+        self.tblModel = PandasModel()
         self.tblResults.setModel(self.tblModel)
-        self.tblResults.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.tblResults.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Stretch
+        )
         self.tblResults.setAlternatingRowColors(True)
         tbl_lay.addWidget(self.tblResults)
         splitter.addWidget(tbl_widget)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 1)
 
-        # ── Pasta de saida (abaixo do splitter) ───────────────────────────
+        # Output folder
         save_card = QFrame()
         save_card.setObjectName('card')
         save_lay = QVBoxLayout(save_card)
@@ -433,7 +461,9 @@ class CurvaCAVDialog(QDialog):
         folder_lay.setContentsMargins(0, 0, 0, 0)
         folder_lay.setSpacing(8)
         self.txtOutputFolder = QLineEdit()
-        self.txtOutputFolder.setPlaceholderText('(opcional) selecione a pasta para salvar CSV e grafico')
+        self.txtOutputFolder.setPlaceholderText(
+            '(optional) select folder to save CSV and chart'
+        )
         self.btnBrowse = QPushButton('Selecionar...')
         folder_lay.addWidget(self.txtOutputFolder, 1)
         folder_lay.addWidget(self.btnBrowse)
@@ -456,21 +486,30 @@ class CurvaCAVDialog(QDialog):
         layout.addWidget(card)
         icon_label = QLabel()
         icon_label.setAlignment(Qt.AlignCenter)
-        icon_label.setPixmap(QIcon(os.path.join(self.plugin_dir, 'icon.png')).pixmap(72, 72))
+        icon_label.setPixmap(
+            QIcon(os.path.join(self.plugin_dir, 'icon.png')).pixmap(72, 72)
+        )
         card_lay.addWidget(icon_label)
         t = QLabel('curvaCAV-GIS')
         t.setAlignment(Qt.AlignCenter)
         t.setObjectName('titleLabel')
         card_lay.addWidget(t)
         info = QLabel(
-            '<div style="text-align:center;">' +
-            '<p>Versao 1.0.5 &nbsp;|&nbsp; 04/05/2026</p>' +
-            '<p style="color:#526476;">Para duvidas, sugestoes, bug reports, treinamentos e plugins sob medida, favor entrar em contato.</p>' +
-            '<p><b>Autor:</b> Rodrigo Goncalves</p>' +
-            '<p><b>Email:</b> <a href="mailto:rcghidro@gmail.com">rcghidro@gmail.com</a></p>' +
-            '<p style="color:#526476;">Plugin para calculo de curvas Cota-Area-Volume a partir de MDT.</p>' +
-            '<p style="color:#526476;">O autor nao se responsabiliza por resultados, decisoes de projeto ou danos decorrentes do uso deste plugin.</p>' +
-            '<p style="color:#526476;">Se o plugin foi util para voce, <a href="https://rodcgon.github.io/donate/">considere fazer uma doacao para o projeto.</a></p>' +
+            '<div style="text-align:center;">'
+            '<p>Versao 1.0.5 &nbsp;|&nbsp; 04/05/2026</p>'
+            '<p style="color:#526476;">Para duvidas, sugestoes, bug reports, '
+            'treinamentos e plugins sob medida, favor entrar em contato.</p>'
+            '<p><b>Autor:</b> Rodrigo Goncalves</p>'
+            '<p><b>Email:</b> '
+            '<a href="mailto:rcghidro@gmail.com">rcghidro@gmail.com</a></p>'
+            '<p style="color:#526476;">Plugin para calculo de curvas '
+            'Cota-Area-Volume a partir de MDT.</p>'
+            '<p style="color:#526476;">O autor nao se responsabiliza por '
+            'resultados, decisoes de projeto ou danos decorrentes do uso '
+            'deste plugin.</p>'
+            '<p style="color:#526476;">Se o plugin foi util para voce, '
+            '<a href="https://rodcgon.github.io/donate/">'
+            'considere fazer uma doacao para o projeto.</a></p>'
             '</div>'
         )
         info.setOpenExternalLinks(True)
@@ -485,11 +524,11 @@ class CurvaCAVDialog(QDialog):
         self.btnBrowse.clicked.connect(self._choose_folder)
         self.btnRun.clicked.connect(self._run)
         self.btnLoadStats.clicked.connect(self._update_raster_info)
-        # Mudanca de MDT/area/poligono nao dispara calculo automatico
-        # (pode ser lento para rasters grandes — usuario clica em "Carregar estatisticas")
-        self.cmbMdtLayer.currentIndexChanged.connect(self._on_mdt_changed)
+        # MDT/area/polygon changes do NOT trigger automatic computation
+        # (can be slow for large rasters — user clicks "Carregar estatisticas")
+        self.cmbMdtLayer.layerChanged.connect(self._on_mdt_changed)
         self.cmbAreaMode.currentIndexChanged.connect(self._on_area_changed)
-        self.cmbPolygonLayer.currentIndexChanged.connect(self._on_poly_changed)
+        self.cmbPolygonLayer.layerChanged.connect(self._on_poly_changed)
         self.btnDrawRect.clicked.connect(self._activate_draw_tool)
         self.btnSelectFeature.clicked.connect(self._activate_feature_pick)
         self.btnCopyTable.clicked.connect(self._copy_table)
@@ -498,23 +537,33 @@ class CurvaCAVDialog(QDialog):
         self.btnSaveResults.clicked.connect(self._save_results)
 
     def _on_mdt_changed(self):
-        self.lblRasterInfo.setText('MDT alterado. Clique em "Carregar estatisticas" para atualizar.')
+        self.lblRasterInfo.setText(
+            'MDT alterado. Clique em "Carregar estatisticas" para atualizar.'
+        )
 
     def _on_area_changed(self):
         self._update_area_state()
-        self.lblRasterInfo.setText('Area alterada. Clique em "Carregar estatisticas" para atualizar.')
+        self.lblRasterInfo.setText(
+            'Area alterada. Clique em "Carregar estatisticas" para atualizar.'
+        )
 
     def _on_poly_changed(self):
         self._selected_feature = None
         self.lblSelectedFeature.setText('Nenhuma feature selecionada.')
-        self.lblRasterInfo.setText('Layer alterado. Clique em "Carregar estatisticas" para atualizar.')
+        self.lblRasterInfo.setText(
+            'Layer alterado. Clique em "Carregar estatisticas" para atualizar.'
+        )
 
-    # ── Style ─────────────────────────────────────────────────────────────────
+    # ── Stylesheet ────────────────────────────────────────────────────────────
 
     def _apply_style(self):
         self.setStyleSheet("""
             QDialog { background: #f6f8fb; }
-            QTabWidget::pane { border: 1px solid #d8e1ee; border-radius: 6px; background: white; }
+            QTabWidget::pane {
+                border: 1px solid #d8e1ee;
+                border-radius: 6px;
+                background: white;
+            }
             QTabBar::tab {
                 background: #eaf0f7; color: #324255;
                 border: 1px solid #d8e1ee;
@@ -528,43 +577,54 @@ class CurvaCAVDialog(QDialog):
                 padding: 7px 16px; min-width: 80px;
                 font-size: 12px; font-weight: 400;
             }
-            QFrame#card { background: white; border: 1px solid #dde5f0; border-radius: 12px; }
+            QFrame#card {
+                background: white;
+                border: 1px solid #dde5f0;
+                border-radius: 12px;
+            }
             QLabel#titleLabel { font-size: 13px; font-weight: 700; color: #17324d; }
-            QLabel#subtitleLabel, QLabel#infoLabel { color: #526476; font-size: 11px; }
-            QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit {
+            QLabel#subtitleLabel, QLabel#infoLabel {
+                color: #526476; font-size: 11px;
+            }
+            QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit,
+            QgsMapLayerComboBox {
                 background: white; border: 1px solid #cad5e2;
-                border-radius: 8px; padding: 6px 8px; }
-            QTableView { border: 1px solid #cad5e2; border-radius: 8px;
-                         alternate-background-color: #f0f5fc; }
-            QPushButton { border: 1px solid #c7d3e2; border-radius: 8px;
-                          background: white; padding: 7px 14px; color: #17324d; }
-            QPushButton#primaryButton { background: #1f78ff; border: 1px solid #1f78ff;
-                                        color: white; font-weight: 600; }
+                border-radius: 8px; padding: 6px 8px;
+            }
+            QTableView {
+                border: 1px solid #cad5e2; border-radius: 8px;
+                alternate-background-color: #f0f5fc;
+            }
+            QPushButton {
+                border: 1px solid #c7d3e2; border-radius: 8px;
+                background: white; padding: 7px 14px; color: #17324d;
+            }
+            QPushButton#primaryButton {
+                background: #1f78ff; border: 1px solid #1f78ff;
+                color: white; font-weight: 600;
+            }
             QPushButton#primaryButton:hover { background: #1468e1; }
-            QPushButton#copyButton { background: #f0f5fc; border: 1px solid #aec6e8; padding: 5px 10px; }
+            QPushButton#copyButton {
+                background: #f0f5fc; border: 1px solid #aec6e8;
+                padding: 5px 10px;
+            }
             QPushButton#copyButton:hover { background: #dce8f7; }
-            QPushButton#drawButton { background: #e8f4e8; border: 1px solid #7ec87e;
-                                     color: #1a5c1a; padding: 5px 10px; }
+            QPushButton#drawButton {
+                background: #e8f4e8; border: 1px solid #7ec87e;
+                color: #1a5c1a; padding: 5px 10px;
+            }
             QPushButton#drawButton:hover { background: #d0ebd0; }
         """)
 
-    def _fix_combos(self):
-        delegate = ComboItemDelegate(self)
-        for combo in [self.cmbMdtLayer, self.cmbAreaMode, self.cmbPolygonLayer]:
-            combo.setItemDelegate(delegate)
-
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _populate_layers(self):
-        self.cmbMdtLayer.clear()
-        self.cmbPolygonLayer.clear()
-        self.cmbPolygonLayer.addItem('Nenhum', None)
-        for layer in QgsProject.instance().mapLayers().values():
-            if layer.type() == QgsMapLayer.RasterLayer:
-                self.cmbMdtLayer.addItem(layer.name(), layer.id())
-            elif (layer.type() == QgsMapLayer.VectorLayer and
-                  QgsWkbTypes.geometryType(layer.wkbType()) == QgsWkbTypes.PolygonGeometry):
-                self.cmbPolygonLayer.addItem(layer.name(), layer.id())
+    def _get_mdt_layer(self):
+        """Return the currently selected raster (DTM) layer, or None."""
+        return self.cmbMdtLayer.currentLayer()
+
+    def _get_polygon_layer(self):
+        """Return the currently selected polygon layer, or None."""
+        return self.cmbPolygonLayer.currentLayer()
 
     def _update_area_state(self):
         mode = self.cmbAreaMode.currentIndex()
@@ -575,210 +635,187 @@ class CurvaCAVDialog(QDialog):
         self.lblDrawnRect.setVisible(mode == 3)
 
     def _update_raster_info(self):
-        layer_id = self.cmbMdtLayer.currentData()
-        if not layer_id:
+        layer = self._get_mdt_layer()
+        if layer is None:
             self.lblRasterInfo.setText('Selecione um MDT.')
             return
-        layer = QgsProject.instance().mapLayer(layer_id)
-        if layer is None:
-            self.lblRasterInfo.setText('MDT invalido.')
-            return
         mode = self.cmbAreaMode.currentIndex()
-        poly_layer = None
-        if mode == 1:
-            pid = self.cmbPolygonLayer.currentData()
-            poly_layer = QgsProject.instance().mapLayer(pid) if pid else None
+        poly_layer = self._get_polygon_layer() if mode == 1 else None
         if mode == 3 and self._drawn_rect is None:
-            self.lblRasterInfo.setText('Desenhe um retangulo no mapa para carregar estatisticas.')
+            self.lblRasterInfo.setText(
+                'Desenhe um retangulo no mapa para carregar estatisticas.'
+            )
             return
         try:
             stats = get_raster_stats(
                 layer, area_mode=mode, polygon_layer=poly_layer,
-                iface=self.iface, drawn_rect=self._drawn_rect, drawn_crs=self._drawn_crs,
+                iface=self.iface, drawn_rect=self._drawn_rect,
+                drawn_crs=self._drawn_crs,
                 selected_feature=self._selected_feature,
             )
             self.lblRasterInfo.setText(
-                'Cota min: {:.3f} | Cota max: {:.3f} | Res. X: {:.5f} | Res. Y: {:.5f}'.format(
-                    stats['min'], stats['max'], stats['resx'], stats['resy'])
+                'Cota min: {:.3f} | Cota max: {:.3f} | '
+                'Res. X: {:.5f} | Res. Y: {:.5f}'.format(
+                    stats['min'], stats['max'],
+                    stats['resx'], stats['resy'],
+                )
             )
             self.dblCotaIni.setValue(stats['min'])
             self.dblCotaMax.setValue(stats['max'])
         except Exception as e:
-            self.lblRasterInfo.setText('Erro ao ler estatisticas: {}'.format(e))
+            self.lblRasterInfo.setText(
+                'Erro ao ler estatisticas: {}'.format(e)
+            )
 
     def _choose_folder(self):
-        folder = QFileDialog.getExistingDirectory(self, 'Pasta para salvar resultados')
+        folder = QFileDialog.getExistingDirectory(
+            self, 'Pasta para salvar resultados'
+        )
         if folder:
             self.txtOutputFolder.setText(folder)
 
     # ── Feature pick ──────────────────────────────────────────────────────────
 
     def _activate_feature_pick(self):
-        pid = self.cmbPolygonLayer.currentData()
-        if not pid:
-            QMessageBox.warning(self, 'curvaCAV-GIS', 'Selecione um layer poligonal primeiro.')
-            return
-        layer = QgsProject.instance().mapLayer(pid)
+        layer = self._get_polygon_layer()
         if layer is None:
-            QMessageBox.warning(self, 'curvaCAV-GIS', 'Layer poligonal invalido.')
+            QMessageBox.warning(
+                self, 'curvaCAV-GIS', 'Selecione um layer poligonal primeiro.'
+            )
             return
-        self._prev_map_tool = self.iface.mapCanvas().mapTool()
-        tool = FeaturePickTool(self.iface.mapCanvas(), layer, self._on_feature_picked, self.iface)
-        self.iface.mapCanvas().setMapTool(tool)
-        self._pick_tool = tool
-        self.iface.messageBar().pushInfo('curvaCAV-GIS', 'Clique sobre a feature desejada no mapa.')
+        canvas = self.iface.mapCanvas()
+        self._prev_map_tool = canvas.mapTool()
+        tool = FeaturePickTool(canvas, layer, self._on_feature_picked, self.iface)
+        canvas.setMapTool(tool)
         self.hide()
 
     def _on_feature_picked(self, feature):
         self._selected_feature = feature
         self.lblSelectedFeature.setText(
-            'Feature ID: {} | Area: {:.2f} m2'.format(
-                feature.id(),
-                feature.geometry().area() if feature.geometry() else 0.0
-            )
+            'Feature selecionada: ID {}'.format(feature.id())
         )
+        canvas = self.iface.mapCanvas()
         if self._prev_map_tool:
-            self.iface.mapCanvas().setMapTool(self._prev_map_tool)
+            canvas.setMapTool(self._prev_map_tool)
         self.show()
-        self.raise_()
-        self.activateWindow()
         self._update_raster_info()
 
     # ── Rectangle draw ────────────────────────────────────────────────────────
 
     def _activate_draw_tool(self):
-        self._prev_map_tool = self.iface.mapCanvas().mapTool()
-        tool = RectangleMapTool(self.iface.mapCanvas(), self._on_rectangle_drawn)
-        self.iface.mapCanvas().setMapTool(tool)
-        self._rect_tool = tool
+        canvas = self.iface.mapCanvas()
+        self._prev_map_tool = canvas.mapTool()
+        tool = RectangleMapTool(canvas, self._on_rect_drawn)
+        canvas.setMapTool(tool)
         self.hide()
 
-    def _on_rectangle_drawn(self, rect, crs):
+    def _on_rect_drawn(self, rect, crs):
         self._drawn_rect = rect
         self._drawn_crs = crs
         self.lblDrawnRect.setText(
-            'Rect: ({:.2f},{:.2f})-({:.2f},{:.2f})'.format(
+            'Retangulo: ({:.2f}, {:.2f}) — ({:.2f}, {:.2f})'.format(
                 rect.xMinimum(), rect.yMinimum(),
-                rect.xMaximum(), rect.yMaximum()
+                rect.xMaximum(), rect.yMaximum(),
             )
         )
+        canvas = self.iface.mapCanvas()
         if self._prev_map_tool:
-            self.iface.mapCanvas().setMapTool(self._prev_map_tool)
-        self.show(); self.raise_(); self.activateWindow()
+            canvas.setMapTool(self._prev_map_tool)
+        self.show()
         self._update_raster_info()
 
-    # ── Acoes grafico ─────────────────────────────────────────────────────────
+    # ── Chart actions ─────────────────────────────────────────────────────────
 
     def _save_plot(self):
-        if self._current_plot_pixmap is None:
-            QMessageBox.information(self, 'curvaCAV-GIS', 'Nenhum grafico disponivel. Execute o calculo primeiro.')
-            return
-        path, _ = QFileDialog.getSaveFileName(self, 'Salvar Grafico', 'grafico_cav', 'JPEG (*.jpg);;PNG (*.png);;BMP (*.bmp)')
-        if path:
-            self._current_plot_pixmap.save(path)
-            QMessageBox.information(self, 'curvaCAV-GIS', 'Grafico salvo em:\n{}'.format(path))
+        if self._last_plot_path and os.path.isfile(self._last_plot_path):
+            dest, _ = QFileDialog.getSaveFileName(
+                self, 'Salvar grafico', '', 'JPEG (*.jpg);;PNG (*.png)'
+            )
+            if dest:
+                import shutil
+                shutil.copy2(self._last_plot_path, dest)
+        else:
+            QMessageBox.information(
+                self, 'curvaCAV-GIS', 'Nenhum grafico disponivel.'
+            )
 
     def _copy_plot(self):
-        if self._current_plot_pixmap is None:
-            QMessageBox.information(self, 'curvaCAV-GIS', 'Nenhum grafico disponivel. Execute o calculo primeiro.')
-            return
-        QApplication.clipboard().setPixmap(self._current_plot_pixmap)
-        QMessageBox.information(self, 'curvaCAV-GIS', 'Imagem do grafico copiada para o clipboard.')
+        if self._current_plot_pixmap and not self._current_plot_pixmap.isNull():
+            QApplication.clipboard().setPixmap(self._current_plot_pixmap)
+        else:
+            QMessageBox.information(
+                self, 'curvaCAV-GIS', 'Nenhum grafico disponivel.'
+            )
+
+    # ── Table actions ─────────────────────────────────────────────────────────
 
     def _copy_table(self):
-        text = self.tblModel.toClipboardText()
-        if not text.strip():
-            QMessageBox.information(self, 'curvaCAV-GIS', 'Nenhum dado para copiar. Execute o calculo primeiro.')
-            return
-        QApplication.clipboard().setText(text)
-        QMessageBox.information(self, 'curvaCAV-GIS', 'Tabela copiada. Cole no Excel com Ctrl+V.')
+        if self._last_df is not None and not self._last_df.empty:
+            QApplication.clipboard().setText(self.tblModel.toClipboardText())
+        else:
+            QMessageBox.information(
+                self, 'curvaCAV-GIS', 'Nenhuma tabela disponivel.'
+            )
+
+    # ── Save results ──────────────────────────────────────────────────────────
 
     def _save_results(self):
-        """Salva CSV e grafico na pasta definida (pode ser chamado apos o calculo)."""
         folder = self.txtOutputFolder.text().strip()
         if not folder:
-            QMessageBox.warning(self, 'curvaCAV-GIS', 'Selecione a pasta de saida antes de salvar.')
+            QMessageBox.warning(
+                self, 'curvaCAV-GIS',
+                'Selecione uma pasta de saida na aba Resultados.',
+            )
             return
-        if self._last_df is None:
-            QMessageBox.warning(self, 'curvaCAV-GIS', 'Nenhum resultado disponivel. Execute o calculo primeiro.')
+        if self._last_df is None or self._last_df.empty:
+            QMessageBox.warning(
+                self, 'curvaCAV-GIS',
+                'Execute o calculo antes de salvar.',
+            )
             return
-        import os
-        from datetime import datetime
-        os.makedirs(folder, exist_ok=True)
-        stamp = datetime.now().strftime('_%d%b%Y_%Hh%Mm')
-        saved = []
-        csv_path = os.path.join(folder, 'curvaCAV{}.csv'.format(stamp))
-        self._last_df.to_csv(csv_path, encoding='utf-8-sig')
-        saved.append('CSV: {}'.format(csv_path))
-        if self._current_plot_pixmap and not self._current_plot_pixmap.isNull():
-            jpg_path = os.path.join(folder, 'curvaCAV_grafico{}.jpg'.format(stamp))
-            self._current_plot_pixmap.save(jpg_path)
-            saved.append('Grafico: {}'.format(jpg_path))
-        msg = 'Resultados salvos:\n' + '\n'.join(saved)
-        self.txtLog.append(msg)
-        QMessageBox.information(self, 'curvaCAV-GIS', msg)
+        self._run(output_folder=folder)
 
-    # ── Execucao ──────────────────────────────────────────────────────────────
+    # ── Run calculation ───────────────────────────────────────────────────────
 
-    def _run(self):
-        mdt_layer_id = self.cmbMdtLayer.currentData()
-        if not mdt_layer_id:
-            QMessageBox.warning(self, 'curvaCAV-GIS', 'Selecione um MDT.')
+    def _run(self, output_folder=None):
+        layer = self._get_mdt_layer()
+        if layer is None:
+            QMessageBox.warning(
+                self, 'curvaCAV-GIS', 'Selecione um MDT raster.'
+            )
             return
         mode = self.cmbAreaMode.currentIndex()
-        poly_layer = None
-        if mode == 1:
-            pid = self.cmbPolygonLayer.currentData()
-            poly_layer = QgsProject.instance().mapLayer(pid) if pid else None
-            if poly_layer is None:
-                QMessageBox.warning(self, 'curvaCAV-GIS', 'Selecione um layer poligonal valido.')
-                return
-            if self._selected_feature is None:
-                resp = QMessageBox.question(
-                    self, 'curvaCAV-GIS',
-                    'Nenhuma feature selecionada. Deseja usar o layer poligonal inteiro?',
-                    QMessageBox.Yes | QMessageBox.No
-                )
-                if resp != QMessageBox.Yes:
-                    return
-        if mode == 3 and self._drawn_rect is None:
-            QMessageBox.warning(self, 'curvaCAV-GIS', 'Desenhe um retangulo no mapa antes de calcular.')
-            return
+        poly_layer = self._get_polygon_layer() if mode == 1 else None
+        folder = output_folder or self.txtOutputFolder.text().strip() or None
 
-        params = {
-            'iface':            self.iface,
-            'mdt_layer':        QgsProject.instance().mapLayer(mdt_layer_id),
-            'area_mode':        mode,
-            'polygon_layer':    poly_layer,
-            'cota_ini':         self.dblCotaIni.value(),
-            'cota_max':         self.dblCotaMax.value(),
-            'incr':             self.dblIncremento.value(),
-            'output_folder':    None,
-            'make_plot':        self.chkPlot.isChecked(),
-            'drawn_rect':       self._drawn_rect,
-            'drawn_crs':        self._drawn_crs,
-            'selected_feature': self._selected_feature,
-        }
-        self.txtLog.append('Calculando...')
         try:
-            result = run_cav(**params)
-            self.txtLog.append(result['message'])
-            self._last_df = result.get('df')
+            result = run_cav(
+                iface=self.iface,
+                mdt_layer=layer,
+                area_mode=mode,
+                polygon_layer=poly_layer,
+                cota_ini=self.dblCotaIni.value(),
+                cota_max=self.dblCotaMax.value(),
+                incr=self.dblIncremento.value(),
+                output_folder=folder,
+                make_plot=self.chkPlot.isChecked(),
+                drawn_rect=self._drawn_rect,
+                drawn_crs=self._drawn_crs,
+                selected_feature=self._selected_feature,
+            )
+            self._last_df = result['df']
             self._last_plot_path = result.get('plot')
-            if self._last_df is not None:
-                self.tblModel.setDataFrame(self._last_df)
-            plot_path = result.get('plot')
-            if plot_path and os.path.exists(plot_path):
-                pix = QPixmap(plot_path)
+            self.tblModel.setDataFrame(result['df'])
+            self.txtLog.append(result['message'])
+            if result.get('csv'):
+                self.txtLog.append('CSV: {}'.format(result['csv']))
+            if result.get('plot'):
+                self.txtLog.append('Plot: {}'.format(result['plot']))
+                pix = QPixmap(result['plot'])
                 if not pix.isNull():
                     self._current_plot_pixmap = pix
                     self.lblPlot.setSourcePixmap(pix)
-                else:
-                    self.lblPlot.setText('Nao foi possivel carregar o grafico.')
-            else:
-                self.lblPlot.setText('Grafico nao gerado.')
-            self.tabs.setCurrentWidget(self.tab_results)
-            QMessageBox.information(self, 'curvaCAV-GIS', 'Calculo concluido. Use "Salvar resultados" para exportar.')
+                    self.tabs.setCurrentIndex(1)
         except Exception as e:
-            self.txtLog.append('Erro: {}'.format(e))
-            QMessageBox.critical(self, 'curvaCAV-GIS', 'Erro: {}'.format(e))
+            QMessageBox.critical(self, 'curvaCAV-GIS - Erro', str(e))
+            self.txtLog.append('ERRO: {}'.format(e))
