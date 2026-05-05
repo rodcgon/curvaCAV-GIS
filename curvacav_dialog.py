@@ -230,7 +230,7 @@ class CurvaCAVDialog(QDialog):
         self._last_df = None
         self._last_plot_path = None
 
-        self.setWindowTitle('curvaCAV-GIS  v1.0.7')
+        self.setWindowTitle('curvaCAV-GIS  v1.0.8')
         self.setMinimumWidth(700)
         self.setMinimumHeight(660)
         self._build_ui()
@@ -586,10 +586,33 @@ class CurvaCAVDialog(QDialog):
             QLabel#subtitleLabel, QLabel#infoLabel {
                 color: #526476; font-size: 11px;
             }
-            QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit,
+            QLineEdit, QDoubleSpinBox, QTextEdit {
+                background: white;
+                color: #17324d;
+                border: 1px solid #cad5e2;
+                border-radius: 8px;
+                padding: 6px 8px;
+            }
+
+            QComboBox,
             QgsMapLayerComboBox {
-                background: white; border: 1px solid #cad5e2;
-                border-radius: 8px; padding: 6px 8px;
+                background: white;
+                color: #17324d;
+                border: 1px solid #cad5e2;
+                border-radius: 8px;
+                padding: 6px 8px;
+                selection-background-color: #1f78ff;
+                selection-color: #ffffff;
+            }
+
+            QComboBox QAbstractItemView,
+            QgsMapLayerComboBox QAbstractItemView {
+                background: #ffffff;
+                color: #17324d;
+                border: 1px solid #cad5e2;
+                selection-background-color: #1f78ff;
+                selection-color: #ffffff;
+                outline: 0;
             }
             QTableView {
                 border: 1px solid #cad5e2; border-radius: 8px;
