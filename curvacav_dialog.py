@@ -230,7 +230,7 @@ class CurvaCAVDialog(QDialog):
         self._last_df = None
         self._last_plot_path = None
 
-        self.setWindowTitle('curvaCAV-GIS  v1.0.6')
+        self.setWindowTitle('curvaCAV-GIS  v1.0.7')
         self.setMinimumWidth(700)
         self.setMinimumHeight(660)
         self._build_ui()
