@@ -368,7 +368,7 @@ class CurvaCAVDialog(QDialog):
         self._last_source_nodata = None
         self._last_mdt_name = None
 
-        self.setWindowTitle('curvaCAV-GIS v1.1.0')
+        self.setWindowTitle('curvaCAV-GIS v1.1.1')
         self.setMinimumWidth(700)
         self.setMinimumHeight(660)
 
