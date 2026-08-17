@@ -9,6 +9,7 @@ QGIS plugin for calculating **Elevation-Area-Volume (CAV/EAV)** curves from a DT
 - On-demand raster statistics (min/max elevation, resolution)
 - Results tab with interactive Area and Volume chart
 - Full Elevation-Area-Volume table
+- Draw a Polygon enclosing a determined WSL
 - Export results as CSV and PNG chart
 - Copy table to clipboard (paste directly in Excel with Ctrl+V)
 - Copy chart image to clipboard

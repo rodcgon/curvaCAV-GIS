@@ -29,4 +29,4 @@ class CurvaCAVGIS:
 
     def run(self):
         dlg = CurvaCAVDialog(self.iface, self.iface.mainWindow())
-        dlg.exec_()
+        dlg.exec()

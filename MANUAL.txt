@@ -1,4 +1,4 @@
-curvaCAV-GIS - Quick Manual (v1.0.5)
+curvaCAV-GIS - Quick Manual (v1.1.0)
 
 1. Purpose
 Calculates Elevation-Area-Volume (CAV/EAV) curves from a DTM raster in QGIS.
@@ -14,7 +14,7 @@ current map extent clipping, or user-drawn rectangle on the map canvas.
 3. Installation (from ZIP)
 1) QGIS -> Plugins -> Manage and Install Plugins
 2) Click "Install from ZIP"
-3) Select curvaCAV_GIS_v1.0.5_PTBR.zip
+3) Select curvaCAV_GIS_v*.zip
 4) Enable "curvaCAV-GIS" in Plugins -> Manage
 
 4. Basic Usage
